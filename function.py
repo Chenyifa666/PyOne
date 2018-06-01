@@ -131,7 +131,6 @@ def GetItem(url,items,globalDict,extDict):
     r=requests.get(url,headers=header)
     data=json.loads(r.text)
     values=data.get('value')
-    print('fetching data from {}'.format(url))
     if len(values)>0:
         for value in values:
             item={}
