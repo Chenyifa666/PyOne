@@ -20,14 +20,14 @@ from threading import Thread
 #######网站目录
 config_dir='/root/pyone/config'
 #######分享目录
-share_path='/2mm'
+share_path='/'
 #######Azure directory应用设置,自行注册Azure directory
-client_id='应用程序id'
-client_secret='api密钥'
-redirect_uri='http://yourdomain'
+client_id='72f1d966-4dea-4ec3-affe-8d4e455590ff'
+client_secret='iDysgiZKgoICyitcHaj1pFvimRGUmYolKrY1CBJwJa8='
+redirect_uri='http://one.3kk.me'
 
 #######授权链接
-od_type='business_21v' #国际版：bussiness; 世纪互联版：bussiness_21v
+od_type='business' #国际版：bussiness; 世纪互联版：bussiness_21v
 global app_url
 if od_type=='business':
     BaseAuthUrl='https://login.microsoftonline.com'
@@ -36,7 +36,7 @@ if od_type=='business':
 elif od_type=='business_21v':
     BaseAuthUrl='https://login.partner.microsoftonline.cn'
     ResourceID='00000003-0000-0ff1-ce00-000000000000'
-    app_url='https://2mm-my.sharepoint.cn/'  #世纪互联版需要自定义onedrive的域名,最后必须带/
+    app_url='https://yourdomain-my.sharepoint.cn/'  #世纪互联版需要自定义onedrive的域名,最后必须带/
 
 LoginUrl=BaseAuthUrl+'/common/oauth2/authorize?response_type=code\
 &client_id={client_id}&redirect_uri={redirect_uri}'.format(client_id=client_id,redirect_uri=urllib.quote(redirect_uri))
@@ -62,6 +62,7 @@ def OAuth(code):
     return json.loads(r.text)
 
 def ReFreshToken(refresh_token):
+    app_url=GetAppUrl()
     headers['Content-Type']='application/x-www-form-urlencoded'
     data=ReFreshData.format(client_id=client_id,redirect_uri=urllib.quote(redirect_uri),client_secret=client_secret,refresh_token=refresh_token,resource_id=app_url)
     url=OAuthUrl
@@ -69,15 +70,15 @@ def ReFreshToken(refresh_token):
     return json.loads(r.text)
 
 
-def GetToken():
-    if os.path.exists(os.path.join(config_dir,'token.json')):
-        with open(os.path.join(config_dir,'token.json'),'r') as f:
+def GetToken(Token_file='token.json'):
+    if os.path.exists(os.path.join(config_dir,Token_file)):
+        with open(os.path.join(config_dir,Token_file),'r') as f:
             token=json.load(f)
         if time.time()>int(token.get('expires_on')):
             refresh_token=token.get('refresh_token')
             token=ReFreshToken(refresh_token)
             if token.get('access_token'):
-                with open(os.path.join(config_dir,'token.json'),'w') as f:
+                with open(os.path.join(config_dir,Token_file),'w') as f:
                     json.dump(token,f,ensure_ascii=False)
         return token.get('access_token')
     else:
@@ -88,10 +89,11 @@ def GetAppUrl():
     if os.path.exists(os.path.join(config_dir,'AppUrl')):
         with open(os.path.join(config_dir,'AppUrl'),'r') as f:
             app_url=f.read().strip()
+        print app_url
         return app_url
     else:
         if od_type=='business':
-            token=GetToken()
+            token=GetToken(Token_file='Atoken.json')
             if token:
                 header={'Authorization': 'Bearer {}'.format(token)}
                 url='https://api.office.com/discovery/v2.0/me/services'
@@ -113,6 +115,7 @@ def GetExt(name):
     return name.split('.')[-1]
 
 def Dir(path='/'):
+    app_url=GetAppUrl()
     if path=='/':
         BaseUrl=app_url+'_api/v2.0/me/drive/root/children?expand=thumbnails'
     else:
@@ -162,11 +165,11 @@ def GetItem(url,items,globalDict,extDict):
 def UpdateFile():
     items,globalDict,extDict=Dir(share_path)
     with open(os.path.join(config_dir,'data.json'),'w') as f:
-        json.dump(items,f,ensure_ascii=False)
+        json.dump(items,f)
     with open(os.path.join(config_dir,'KeyValue.json'),'w') as f:
-        json.dump(globalDict,f,ensure_ascii=False)
+        json.dump(globalDict,f)
     with open(os.path.join(config_dir,'extDict.json'),'w') as f:
-        json.dump(extDict,f,ensure_ascii=False)
+        json.dump(extDict,f)
     print('update file success!')
 
 
