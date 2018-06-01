@@ -329,7 +329,7 @@ def LoadLocalFile():
     return remotefiles
 
 def UploadDir(local_dir,remote_dir,threads=5):
-    items,globalDict=Dir(remote_dir)
+    items,globalDict,extDict=Dir(remote_dir)
     #remotefiles=LoadLocalFile()
     localfiles=os.listdir(local_dir)
     waiting_files=[os.path.join(local_dir,i) for i in localfiles if not items.get(i)]
