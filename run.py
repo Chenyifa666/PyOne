@@ -176,7 +176,7 @@ def index(path='/'):
                 json.dump(token,f,ensure_ascii=False)
             return make_response('<h1>authorize success!</h1>')
         else:
-            return jsonify(token)
+            return jsonify(Atoken)
     else:
         if not os.path.exists('config/data.json'):
             if not os.path.exists('config/token.json'):
