@@ -22,9 +22,9 @@ config_dir='/root/pyone/config'
 #######分享目录
 share_path='/'
 #######Azure directory应用设置,自行注册Azure directory
-client_id='72f1d966-4dea-4ec3-affe-8d4e455590ff'
-client_secret='iDysgiZKgoICyitcHaj1pFvimRGUmYolKrY1CBJwJa8='
-redirect_uri='http://one.3kk.me'
+client_id='Azure directory应用程序id'
+client_secret='Azure directory API秘钥'
+redirect_uri='http://yourdomain'
 
 #######授权链接
 od_type='business' #国际版：bussiness; 世纪互联版：bussiness_21v
@@ -165,11 +165,11 @@ def GetItem(url,items,globalDict,extDict):
 def UpdateFile():
     items,globalDict,extDict=Dir(share_path)
     with open(os.path.join(config_dir,'data.json'),'w') as f:
-        json.dump(items,f)
+        json.dump(items,f,ensure_ascii=True)
     with open(os.path.join(config_dir,'KeyValue.json'),'w') as f:
-        json.dump(globalDict,f)
+        json.dump(globalDict,f,ensure_ascii=True)
     with open(os.path.join(config_dir,'extDict.json'),'w') as f:
-        json.dump(extDict,f)
+        json.dump(extDict,f,ensure_ascii=True)
     print('update file success!')
 
 
