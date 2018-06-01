@@ -38,15 +38,14 @@ def FetchData(path='/',page=1,per_page=50):
             resp.append(item)
     else:
         route=path.split('/')
-        cmd='data'
+        cmd=u'data'
         for idx,r in enumerate(route):
             if idx==0:
-                cmd+='.get("{}")'.format(r)
+                cmd+=u'.get(u"{}")'.format(r)
             else:
-                cmd+='.get("value").get("{}")'.format(r)
+                cmd+=u'.get("value").get(u"{}")'.format(r)
             if idx==len(route)-1:
-                cmd+='.get("value")'
-        print(cmd)
+                cmd+=u'.get("value")'
         result=eval(cmd)
         items=result.items()
         total=len(items)
@@ -122,14 +121,15 @@ def has_password(path):
             password=_remote_content(data.get('.password'))
     else:
         route=path.split('/')
-        cmd='data'
+        cmd=u'data'
         for idx,r in enumerate(route):
             if idx==0:
-                cmd+='.get("{}")'.format(r)
+                cmd+=u'.get(u"{}")'.format(unicode(r))
             else:
-                cmd+='.get("value").get("{}")'.format(r)
+                cmd+=u'.get("value").get(u"{}")'.format(unicode(r))
             if idx==len(route)-1:
-                cmd+='.get("value")'
+                cmd+=u'.get("value")'
+        print cmd
         result=eval(cmd)
         if result.get('.password'):
             password=_remote_content(result.get('.password'))
@@ -174,9 +174,9 @@ def index(path='/'):
             token=ReFreshToken(refresh_token)
             with open('config/token.json','w') as f:
                 json.dump(token,f,ensure_ascii=False)
-            return make_response('<h1>authorize success!</h1>')
+            return make_response('<h1>授权成功!<a href="/">点击进入首页</a></h1>')
         else:
-            return jsonify(Atoken)
+            return jsonify(token)
     else:
         if not os.path.exists('config/data.json'):
             if not os.path.exists('config/token.json'):
