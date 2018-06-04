@@ -2,3 +2,5 @@ flask
 flask_sqlalchemy
 humanize
 gunicorn
+redis
+python-dateutil
