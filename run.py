@@ -7,11 +7,12 @@ import subprocess
 import hashlib
 import random
 from function import *
-
+from config import *
+from redis import Redis
+import time
 #######flask
 app=Flask(__name__)
-
-allow_site=['no-referrer'] #如果不限制，则添加：no-referrer
+rd=Redis(host='localhost',port=6379)
 ################################################################################
 ###################################功能函数#####################################
 ################################################################################
@@ -21,7 +22,7 @@ def md5(string):
     return a.hexdigest()
 
 def FetchData(path='/',page=1,per_page=50):
-    with open('config/data.json','r') as f:
+    with open(os.path.join(config_dir,'data.json'),'r') as f:
         data=json.load(f, object_pairs_hook=OrderedDict)
     resp=[]
     if path=='/':
@@ -61,14 +62,41 @@ def FetchData(path='/',page=1,per_page=50):
     return resp,total
 
 
+def _getdownloadurl(id):
+    app_url=GetAppUrl()
+    token=GetToken()
+    headers={'Authorization':'bearer {}'.format(token),'Content-Type':'application/json'}
+    url=app_url+'_api/v2.0/me/drive/items/'+id
+    r=requests.get(url,headers=headers)
+    data=json.loads(r.content)
+    if data.get('@content.downloadUrl'):
+        return data.get('@content.downloadUrl')
+    else:
+        return True
+
 def GetDownloadUrl(id):
-    with open('config/KeyValue.json','r') as f:
-        kv=json.load(f)
-    downloadUrl=kv[id]['downloadUrl']
+    if rd.exists('downloadUrl:{}'.format(id)):
+        downloadUrl,ftime=rd.get('downloadUrl:{}'.format(id)).split('####')
+        if time.time()-int(ftime)>=600:
+            print('{} downloadUrl expired!'.format(id))
+            downloadUrl=_getdownloadurl(id)
+            ftime=int(time.time())
+            k='####'.join([downloadUrl,str(ftime)])
+            rd.set('downloadUrl:{}'.format(id),k)
+        else:
+            print('get {}\'s downloadUrl from cache'.format(id))
+            downloadUrl=downloadUrl
+    else:
+        print('first time get downloadUrl from {}'.format(id))
+        downloadUrl=_getdownloadurl(id)
+        ftime=int(time.time())
+        k='####'.join([downloadUrl,str(ftime)])
+        rd.set('downloadUrl:{}'.format(id),k)
     return downloadUrl
 
+
 def GetName(id):
-    with open('config/KeyValue.json','r') as f:
+    with open(os.path.join(config_dir,'KeyValue.json'),'r') as f:
         kv=json.load(f)
     name=kv[id]['name']
     return name
@@ -102,7 +130,8 @@ def file_ico(item):
   return "insert_drive_file";
 
 def _remote_content(item):
-    downloadUrl=item.get('downloadUrl')
+    fileid=item.get('id')
+    downloadUrl=GetDownloadUrl(fileid)
     if downloadUrl:
         r=requests.get(downloadUrl)
         return r.content
@@ -111,14 +140,14 @@ def _remote_content(item):
 
 
 def has_password(path):
-    if not os.path.exists('config/data.json'):
+    if not os.path.exists(os.path.join(config_dir,'data.json')):
         return False
-    with open('config/data.json','r') as f:
+    with open(os.path.join(config_dir,'data.json'),'r') as f:
         data=json.load(f, object_pairs_hook=OrderedDict)
     password=False
     if path=='/':
         if data.get('.password'):
-            password=_remote_content(data.get('.password'))
+            password=_remote_content(data.get('.password')).strip()
     else:
         route=path.split('/')
         cmd=u'data'
@@ -132,7 +161,7 @@ def has_password(path):
         print cmd
         result=eval(cmd)
         if result.get('.password'):
-            password=_remote_content(result.get('.password'))
+            password=_remote_content(result.get('.password')).strip()
     return password
 
 
@@ -151,12 +180,15 @@ def index(path='/'):
     code=request.args.get('code')
     page=request.args.get('page',1,type=int)
     password=has_password(path)
+    print password
     md5_p=md5(path)
     if request.method=="POST":
         password1=request.form.get('password')
-        path1=request.form.get('path')
+        print password1
+        print password1==password
         if password1==password:
             resp=make_response(redirect(url_for('.index',path=path)))
+            resp.delete_cookie(md5_p)
             resp.set_cookie(md5_p,password)
             return resp
     if password!=False:
@@ -165,21 +197,21 @@ def index(path='/'):
     if code is not None:
         Atoken=OAuth(code)
         if Atoken.get('access_token'):
-            with open('config/Atoken.json','w') as f:
+            with open(os.path.join(config_dir,'Atoken.json'),'w') as f:
                 json.dump(Atoken,f,ensure_ascii=False)
             app_url=GetAppUrl()
             refresh_token=Atoken.get('refresh_token')
-            with open('config/AppUrl','w') as f:
+            with open(os.path.join(config_dir,'AppUrl'),w) as f:
                 f.write(app_url)
             token=ReFreshToken(refresh_token)
-            with open('config/token.json','w') as f:
+            with open(os.path.join(config_dir,'token.json'),'w') as f:
                 json.dump(token,f,ensure_ascii=False)
             return make_response('<h1>授权成功!<a href="/">点击进入首页</a></h1>')
         else:
-            return jsonify(token)
+            return jsonify(Atoken)
     else:
-        if not os.path.exists('config/data.json'):
-            if not os.path.exists('config/token.json'):
+        if not os.path.exists(os.path.join(config_dir,'data.json')):
+            if not os.path.exists(os.path.join(config_dir,'token.json')):
                 return make_response('<h1><a href="{}">点击授权账号</a></h1>'.format(LoginUrl))
             else:
                 subprocess.Popen('python function.py UpdateFile',shell=True)

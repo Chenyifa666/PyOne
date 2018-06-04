@@ -1,5 +1,4 @@
 #-*- coding=utf-8 -*-
-import webbrowser
 import json
 import requests
 import collections
@@ -15,19 +14,11 @@ import StringIO
 from dateutil.parser import parse
 from Queue import Queue
 from threading import Thread
+from config import *
 
 
-#######网站目录
-config_dir='/root/pyone/config'
-#######分享目录
-share_path='/'
-#######Azure directory应用设置,自行注册Azure directory
-client_id='Azure directory应用程序id'
-client_secret='Azure directory API秘钥'
-redirect_uri='http://yourdomain'
 
 #######授权链接
-od_type='business' #国际版：bussiness; 世纪互联版：bussiness_21v
 global app_url
 if od_type=='business':
     BaseAuthUrl='https://login.microsoftonline.com'
@@ -36,7 +27,7 @@ if od_type=='business':
 elif od_type=='business_21v':
     BaseAuthUrl='https://login.partner.microsoftonline.cn'
     ResourceID='00000003-0000-0ff1-ce00-000000000000'
-    app_url='https://yourdomain-my.sharepoint.cn/'  #世纪互联版需要自定义onedrive的域名,最后必须带/
+    app_url='https://2mm-my.sharepoint.cn/'  #世纪互联版需要自定义onedrive的域名,最后必须带/
 
 LoginUrl=BaseAuthUrl+'/common/oauth2/authorize?response_type=code\
 &client_id={client_id}&redirect_uri={redirect_uri}'.format(client_id=client_id,redirect_uri=urllib.quote(redirect_uri))
@@ -50,9 +41,6 @@ headers={}
 ###################################授权函数#####################################
 ################################################################################
 
-def ODLogin():
-    print('your browser should be open then url:{}\n,if not? open the url by yourself.'.format(LoginUrl))
-    webbrowser.open(LoginUrl)
 
 def OAuth(code):
     headers['Content-Type']='application/x-www-form-urlencoded'
@@ -62,7 +50,6 @@ def OAuth(code):
     return json.loads(r.text)
 
 def ReFreshToken(refresh_token):
-    app_url=GetAppUrl()
     headers['Content-Type']='application/x-www-form-urlencoded'
     data=ReFreshData.format(client_id=client_id,redirect_uri=urllib.quote(redirect_uri),client_secret=client_secret,refresh_token=refresh_token,resource_id=app_url)
     url=OAuthUrl
@@ -75,8 +62,10 @@ def GetToken(Token_file='token.json'):
         with open(os.path.join(config_dir,Token_file),'r') as f:
             token=json.load(f)
         if time.time()>int(token.get('expires_on')):
+            print 'token timeout'
             refresh_token=token.get('refresh_token')
             token=ReFreshToken(refresh_token)
+            print token
             if token.get('access_token'):
                 with open(os.path.join(config_dir,Token_file),'w') as f:
                     json.dump(token,f,ensure_ascii=False)
@@ -131,6 +120,7 @@ def GetItem(url,items,globalDict,extDict):
     r=requests.get(url,headers=header)
     data=json.loads(r.text)
     values=data.get('value')
+    #print url
     if len(values)>0:
         for value in values:
             item={}
@@ -329,8 +319,8 @@ def LoadLocalFile():
     return remotefiles
 
 def UploadDir(local_dir,remote_dir,threads=5):
-    items,globalDict,extDict=Dir(remote_dir)
-    #remotefiles=LoadLocalFile()
+    # items,globalDict,extDict=Dir(remote_dir)
+    items=LoadLocalFile()
     localfiles=os.listdir(local_dir)
     waiting_files=[os.path.join(local_dir,i) for i in localfiles if not items.get(i)]
     queue=Queue()
