@@ -1,4 +1,4 @@
-# PyOne - [oneindex](https://github.com/donwa/oneindex)的python版本
+# PyOne - 基于Python的onedrive文件本地化浏览系统
 
 ## 更新记录 ##
 2018-06-04：
