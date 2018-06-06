@@ -121,10 +121,10 @@ def Dir(path='/'):
         if path.endswith('/'):
             path=path[:-1]
         BaseUrl=app_url+'_api/v2.0/me/drive/root:{}:/children?expand=thumbnails'.format(path)
-    items,globalDict,extDict=GetItem(BaseUrl,items=collections.OrderedDict(),globalDict={},extDict={})
-    return items,globalDict,extDict
+    items,extDict=GetItem(BaseUrl,items=collections.OrderedDict(),extDict={})
+    return items,extDict
 
-def GetItem(url,items,globalDict,extDict):
+def GetItem(url,items,extDict):
     token=GetToken()
     header={'Authorization': 'Bearer {}'.format(token)}
     r=requests.get(url,headers=header)
@@ -144,29 +144,24 @@ def GetItem(url,items,globalDict,extDict):
                     item['value']={}
                 else:
                     url=app_url+'_api/v2.0/me'+value.get('parentReference').get('path')+'/'+value.get('name')+':/children?expand=thumbnails'
-                    item['value'],globalDict,extDict=GetItem(url,collections.OrderedDict(),globalDict,extDict)
-                globalDict[value['id']]=dict(name=value['name'])
+                    item['value'],extDict=GetItem(url,collections.OrderedDict(),extDict)
             else:
                 item['type']='file',
                 item['name']=value['name']
                 item['id']=value['id']
                 item['size']=humanize.naturalsize(value['size'], gnu=True)
                 item['lastModtime']=humanize.naturaldate(parse(value['lastModifiedDateTime']))
-                item['downloadUrl']=value['@content.downloadUrl']
-                globalDict[value['id']]=dict(name=value['name'],downloadUrl=value['@content.downloadUrl'])
                 extDict.setdefault(GetExt(value['name']),[]).append(value['id'])
             items[item['name']]=item
     if data.get('@odata.nextLink'):
-        GetItem(data.get('@odata.nextLink'),items,globalDict,extDict)
-    return items,globalDict,extDict
+        GetItem(data.get('@odata.nextLink'),items,extDict)
+    return items,extDict
 
 
 def UpdateFile():
-    items,globalDict,extDict=Dir(share_path)
+    items,extDict=Dir(share_path)
     with open(os.path.join(config_dir,'data.json'),'w') as f:
         json.dump(items,f,ensure_ascii=True)
-    with open(os.path.join(config_dir,'KeyValue.json'),'w') as f:
-        json.dump(globalDict,f,ensure_ascii=True)
     with open(os.path.join(config_dir,'extDict.json'),'w') as f:
         json.dump(extDict,f,ensure_ascii=True)
     print('update file success!')
