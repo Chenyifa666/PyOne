@@ -50,6 +50,7 @@ def OAuth(code):
     return json.loads(r.text)
 
 def ReFreshToken(refresh_token):
+    app_url=GetAppUrl()
     headers['Content-Type']='application/x-www-form-urlencoded'
     data=ReFreshData.format(client_id=client_id,redirect_uri=urllib.quote(redirect_uri),client_secret=client_secret,refresh_token=refresh_token,resource_id=app_url)
     url=OAuthUrl
@@ -61,17 +62,26 @@ def GetToken(Token_file='token.json'):
     if os.path.exists(os.path.join(config_dir,Token_file)):
         with open(os.path.join(config_dir,Token_file),'r') as f:
             token=json.load(f)
-        if time.time()>int(token.get('expires_on')):
-            print 'token timeout'
-            refresh_token=token.get('refresh_token')
+        try:
+            if time.time()>int(token.get('expires_on')):
+                print 'token timeout'
+                refresh_token=token.get('refresh_token')
+                token=ReFreshToken(refresh_token)
+                if token.get('access_token'):
+                    with open(os.path.join(config_dir,Token_file),'w') as f:
+                        json.dump(token,f,ensure_ascii=False)
+        except:
+            with open(os.path.join(config_dir,'Atoken.json'),'r') as f:
+                Atoken=json.load(f)
+            refresh_token=Atoken.get('refresh_token')
             token=ReFreshToken(refresh_token)
-            print token
             if token.get('access_token'):
-                with open(os.path.join(config_dir,Token_file),'w') as f:
-                    json.dump(token,f,ensure_ascii=False)
+                    with open(os.path.join(config_dir,Token_file),'w') as f:
+                        json.dump(token,f,ensure_ascii=False)
         return token.get('access_token')
     else:
         return False
+
 
 def GetAppUrl():
     global app_url
